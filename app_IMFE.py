@@ -35,15 +35,15 @@ if "configurado" not in st.session_state:
 # ==========================================
 if not st.session_state.configurado:
     st.title("🚀 Configuración del Laboratorio Colaborativo")
-    st.info("Esta sección debe ser completada por el docente antes de iniciar con los estudiantes.")
+    st.info("Esta sección debe completarse siguiendo las indicaciones del o la docente del curso antes de iniciar con los estudiantes.")
     
     with st.form("registro"):
         col1, col2 = st.columns(2)
         with col1:
-            nrc = st.text_input("ID del Curso (NRC/Código)", placeholder="Ej: MAT101")
-            grupo_id = st.text_input("ID del Grupo", placeholder="Ej: Grupo A-1")
+            nrc = st.text_input("ID del Curso (Código/NRC)", placeholder="Ej: AES519/1375")
+            grupo_id = st.text_input("ID del Grupo", placeholder="Ej: Grupo A")
         with col2:
-            archivo_pdf = st.file_uploader("Subir Manual de Referencia (PDF)", type="pdf")
+            archivo_pdf = st.file_uploader("Subir apuntes del curso (PDF)", type="pdf")
             integrantes = st.text_area("Lista de Integrantes (uno por línea)")
         
         submit = st.form_submit_button("Inicializar Entorno de Aprendizaje")
@@ -51,7 +51,7 @@ if not st.session_state.configurado:
         if submit:
             if nrc and grupo_id and archivo_pdf and integrantes:
                 try:
-                    with st.spinner("El alumno virtual está estudiando el manual..."):
+                    with st.spinner("El alumno virtual está estudiando los apuntes del curso..."):
                         # Procesamiento de PDF con RAG
                         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                             tmp.write(archivo_pdf.getvalue())
@@ -88,10 +88,10 @@ with st.sidebar:
     st.header("Instrucciones")
     st.write("1. Selecciona quién está hablando.")
     st.write("2. Explica el concepto al alumno virtual.")
-    st.write("3. Si el alumno tiene dudas, usa el manual para aclararlas.")
+    st.write("3. Si el alumno tiene dudas, utiliza los contenidos del curso para aclararlas.")
     
     st.divider()
-    if st.button("🔴 Finalizar Sesión (Generar Datos)"):
+    if st.button("🔴 Finalizar Sesión (Generar datos)"):
         st.session_state.finalizado = True
 
 # Mostrar historial de mensajes
@@ -120,13 +120,13 @@ if prompt:
         
         # 3. Generación de respuesta con Prompt Ingenierizado para Educación
         sys_prompt = (
-            "Eres un estudiante virtual curioso pero con dudas. Tu objetivo es aprender de los humanos. "
-            "Usa el CONTEXTO DEL MANUAL proporcionado para validar lo que dicen. "
+            "Eres un estudiante curioso, pero con dudas. Tu objetivo es aprender de los humanos. "
+            "Usa el CONTEXTO DE LOS MATERIALES DEL CURSO  proporcionado para validar lo que dicen. "
             "Si lo que dicen es incompleto o incorrecto según el manual, expresa una duda socrática. "
             "No des la respuesta correcta directamente; haz que ellos piensen."
         )
         
-        full_query = f"CONTEXTO DEL MANUAL:\n{contexto}\n\nEXPLICACIÓN DEL GRUPO:\n{prompt}"
+        full_query = f"CONTEXTO DEL MATERIAL DEL CURSO:\n{contexto}\n\nEXPLICACIÓN DEL GRUPO:\n{prompt}"
         
         response = client.chat.completions.create(
             model="gpt-4o",
@@ -158,18 +158,19 @@ if prompt:
 # ==========================================
 if st.session_state.get("finalizado"):
     st.divider()
-    st.header("📊 Resultados del Experimento")
+    st.header("📊 Resultados del experimento")
     
     if st.session_state.log_data:
         df = pd.DataFrame(st.session_state.log_data)
         
-        # Generar CSV
-        csv_data = df.to_csv(index=False).encode('utf-8')
+        # SOLUCIÓN AL PROBLEMA DE TILDES: 
+        # Usamos encoding='utf-8-sig' para que Excel y R reconozcan caracteres especiales
+        csv_data = df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
         
         col_down1, col_down2 = st.columns(2)
         with col_down1:
             st.download_button(
-                label="📥 Descargar Dataset para R (.csv)",
+                label="📥 Descargar dataset (.csv)",
                 data=csv_data,
                 file_name=f"data_{st.session_state.nrc}_{st.session_state.grupo_id}.csv",
                 mime="text/csv"
