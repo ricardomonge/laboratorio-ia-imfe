@@ -55,7 +55,7 @@ if not st.session_state.configurado:
     with st.form("registro"):
         col1, col2 = st.columns(2)
         with col1:
-            nrc = st.text_input("ID del Curso", placeholder="Ej: AES519")
+            nrc = st.text_input("Código de la asignatura y NRC", placeholder="Ej: AES519-1235")
             grupo_id = st.text_input("ID del Grupo", placeholder="Ej: Grupo A")
         with col2:
             archivo_pdf = st.file_uploader("Subir apuntes (PDF)", type="pdf")
@@ -108,7 +108,7 @@ if prompt:
         st.markdown(display_text)
     
     # 2. Búsqueda en los Materiales de la Unidad (RAG)
-    with st.spinner("Tu alumno virtual está revisando los materiales de la unidad..."):
+    with st.spinner("Tu compañero/alumno virtual está revisando los materiales de la unidad..."):
         # Buscamos en los documentos subidos
         docs_rel = st.session_state.vector_db.similarity_search(prompt, k=3)
         contexto = "\n\n".join([d.page_content for d in docs_rel])
