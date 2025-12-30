@@ -98,28 +98,58 @@ with col_u:
 
 prompt = st.chat_input("Escribe tu explicación...")
 
+# ... (mantenemos la carga de archivos y configuración de Supabase igual)
+
 if prompt:
-    st.session_state.messages.append({"role": "user", "content": f"**{autor_actual}:** {prompt}"})
+    # 1. Registro visual del mensaje del grupo
+    display_text = f"**{autor_actual}:** {prompt}"
+    st.session_state.messages.append({"role": "user", "content": display_text})
     with st.chat_message("user"):
-        st.markdown(f"**{autor_actual}:** {prompt}")
+        st.markdown(display_text)
     
-    with st.spinner("Pensando..."):
+    # 2. Búsqueda en los Materiales de la Unidad (RAG)
+    with st.spinner("Tu alumno virtual está revisando los materiales de la unidad..."):
+        # Buscamos en los documentos subidos
         docs_rel = st.session_state.vector_db.similarity_search(prompt, k=3)
         contexto = "\n\n".join([d.page_content for d in docs_rel])
+        
+        # ==========================================
+        # SYSTEM PROMPT REFINADO: FOCO EN MATERIALES DE UNIDAD
+        # ==========================================
+        sys_prompt = (
+            "Eres un estudiante novato que está cursando esta unidad de contenido. "
+            "Tu única fuente de verdad son los MATERIALES DEL CURSO que el profesor te entregó. "
+            "No eres un asistente; eres un compañero de clase al que el grupo debe enseñarle. "
+            
+            "\n\nTU COMPORTAMIENTO:"
+            "\n1. Tono Curioso: Usa frases como 'No me queda claro...', 'En los apuntes entendí que...', '¿Podrían explicarme eso de otra forma?'."
+            "\n2. Uso de Materiales: Tienes acceso a fragmentos de los materiales de la unidad (contexto). "
+            "Si la explicación del grupo omite algo importante que aparece en los materiales, diles: 'Oigan, estaba leyendo los documentos de la unidad y mencionan algo sobre [Concepto], pero ustedes no lo han nombrado... ¿Cómo encaja eso aquí?'."
+            "\n3. Resistencia Cognitiva: No aceptes una respuesta simple de 'Sí' o 'No'. Pide que te convenzan con ejemplos prácticos."
+            "\n4. Meta: Solo si te explican el concepto de forma completa y coherente con los materiales, responde con entusiasmo: '¡Ahhh! Ahora sí entiendo la relación entre X e Y. ¡Gracias equipo!'"
+        )
+        
+        # Estructura de la consulta enviada al modelo
+        full_query = (
+            f"FRAGMENTOS DE LOS MATERIALES DE LA UNIDAD:\n{contexto}\n\n"
+            f"EXPLICACIÓN DE TUS COMPAÑEROS (Grupo {st.session_state.grupo_id}):\n{prompt}"
+        )
         
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "Eres un estudiante curioso. Duda si el grupo no es claro."},
-                {"role": "user", "content": f"Contexto: {contexto}\n\nExplicación: {prompt}"}
-            ]
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": full_query}
+            ],
+            temperature=0.8
         )
+        
         ai_res = response.choices[0].message.content
         st.session_state.messages.append({"role": "assistant", "content": ai_res})
         with st.chat_message("assistant"):
             st.markdown(ai_res)
         
-        # PREPARAR DATOS PARA SUPABASE
+        # 3. Guardado en Supabase (Registro de investigación)
         registro = {
             "nrc": st.session_state.nrc,
             "grupo_id": st.session_state.grupo_id,
@@ -128,10 +158,8 @@ if prompt:
             "respuesta_ia": ai_res,
             "longitud_respuesta": len(prompt)
         }
-        
-        # Guardar en Supabase y localmente
-        st.session_state.log_data.append(registro)
         guardar_en_supabase(registro)
+        st.session_state.log_data.append(registro)
 
 if st.sidebar.button("🔴 Finalizar y Descargar CSV"):
     df = pd.DataFrame(st.session_state.log_data)
