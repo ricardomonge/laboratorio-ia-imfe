@@ -5,3 +5,4 @@ pypdf
 langchain-openai
 langchain-community
 faiss-cpu
+supabase
