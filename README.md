@@ -18,7 +18,7 @@ Este proyecto es una herramienta de aprendizaje colaborativo basada en IA genera
 * **Base de datos**: [Supabase](https://supabase.com/)
 * **Análisis posterior sugerido**: R (Tidyverse, DBI, RPostgres)
 
-## 📋 Configuración de variables de rntorno
+## 📋 Configuración de variables de entorno
 
 Para que la aplicación funcione correctamente en Streamlit Cloud, se deben configurar los siguientes **Secrets**:
 
